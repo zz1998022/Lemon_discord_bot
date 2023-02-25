@@ -1,77 +1,52 @@
-import * as crypto from "crypto";
-import axios from "axios";
-import * as qs from "querystring";
+import axios, { AxiosResponse } from "axios";
+import * as qs from "qs";
 
-interface configInter {
-  appKey: string;
-  appSecret: string;
+// Deepl API翻译响应类型定义
+export interface DeeplResponse {
+  translations: Array<{
+    detected_source_language: string;
+    text: string;
+  }>;
 }
 
-interface queryInter {
-  q: string;
-  from: string;
-  to: string;
-  appKey: string;
-  salt: number;
-  sign: string;
-  curtime: number;
+// Deepl API翻译参数类型定义
+export interface DeeplOptions {
+  text: string;
+  source_lang?: string;
+  target_lang: string;
+  preserve_formatting?: number;
+  formality?: string;
 }
 
-interface ResponseInter {
-  translation: Array<string>;
-}
+// Deepl类定义
+export default class Deepl {
+  private auth_key: string; // 保存Deepl API认证密钥
 
-const transRequest = axios.create();
-
-transRequest.interceptors.response.use((response) => response.data);
-
-class Youdao {
-  private appKey: string = "";
-  private appSecret: string = "";
-  private TRANS_SERVER = "https://openapi.youdao.com/api";
-  // 配置id和密钥
-  public config(config: configInter) {
-    this.appKey = config.appKey;
-    this.appSecret = config.appSecret;
+  constructor(auth_key: string) {
+    this.auth_key = auth_key; // 初始化Deepl实例时保存认证密钥
   }
-  //生成签名
-  private generateSign(
-    content: string,
-    salt: number,
-    appKey: string,
-    appSecret: string
-  ): string {
-    const md5 = crypto.createHash("md5");
-    md5.update(appKey + content + salt + appSecret);
-    const cipher = md5.digest("hex");
-    return cipher.slice(0, 32).toUpperCase();
-  }
-  // 翻译功能
-  public translate(
-    content: string,
-    from: string,
-    to: string
-  ): Promise<ResponseInter> {
-    const appKey = this.appKey;
-    const appSecret = this.appSecret;
-    const utf8 = Buffer.from(content).toString("utf8");
-    const salt = Date.now();
-    const sign = this.generateSign(utf8, salt, appKey, appSecret);
-    // 整合参数
-    const query: queryInter = {
-      appKey,
-      salt,
-      sign,
-      q: utf8,
-      from: from,
-      to: to,
-      curtime: Math.round(new Date().getTime() / 1000),
-    };
-    // 发送请求
-    return transRequest.post(
-      this.TRANS_SERVER + "?" + qs.stringify({ ...query })
-    );
+
+  // Deepl API翻译方法
+  public async translate(options: DeeplOptions): Promise<string> {
+    // 格式化参数
+    const data = qs.stringify({ ...options });
+    try {
+      // 使用axios发送POST请求到Deepl API翻译接口
+      const response: DeeplResponse = await axios.post(
+        "https://api-free.deepl.com/v2/translate", // Deepl API翻译接口URL
+        data,
+        {
+          headers: {
+            Authorization: `DeepL-Auth-Key ${this.auth_key}`, // Deepl API认证密钥
+            "Content-Type": "application/x-www-form-urlencoded", // 请求体格式为application/x-www-form-urlencoded
+          },
+        }
+      );
+      // 返回翻译结果的第一项
+      return response.translations[0].text;
+    } catch (error) {
+      console.error(error);
+      throw new Error("Unable to translate text."); // 抛出异常
+    }
   }
 }
-
-export default Youdao;

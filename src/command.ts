@@ -1,8 +1,6 @@
-import { config } from "../config";
+import { BOT_TOKEN } from "../config";
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
-
-const { BOT_TOKEN } = config;
 
 // 注册指令
 const commands = [

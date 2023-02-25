@@ -1,18 +1,14 @@
 // 引入配置文件
-import { config } from "../config";
+import { deepl_key, BOT_TOKEN } from "../config";
 // 引入discordjs
 import { Client, Intents, MessageEmbed } from "discord.js";
-// 引入有道翻译
-import Youdao from "./utils/translate";
+// 引入Deepl翻译
+import Deepl from "./utils/translate";
 // 引入色图插件
 import { getSetu } from "./utils/setu";
 
-// 获取配置项
-const { BOT_TOKEN, appKey, appSecret } = config;
-// 初始化有道翻译
-const youdao = new Youdao();
-// 配置密钥
-youdao.config({ appKey, appSecret });
+// 初始化Deepl翻译
+const deepl = new Deepl(deepl_key);
 // 初始化客户端
 const client = new Client({
   intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES],
@@ -33,20 +29,18 @@ client.on("messageCreate", async (msg) => {
   switch (language) {
     case "TS_JA ":
       // 翻译为日语
-      const { translation: text_JA } = await youdao.translate(
-        messageContent,
-        "auto",
-        "ja"
-      );
+      const text_JA = await deepl.translate({
+        text: messageContent,
+        target_lang: "ja",
+      });
       msg.reply(text_JA.toString());
       break;
     case "TS_CN ":
       // 翻译为中文
-      const { translation: text_CN } = await youdao.translate(
-        messageContent,
-        "auto",
-        "zh_CHS"
-      );
+      const text_CN = await deepl.translate({
+        text: messageContent,
+        target_lang: "zh",
+      });
       msg.reply(text_CN.toString());
       break;
   }
@@ -54,10 +48,10 @@ client.on("messageCreate", async (msg) => {
   // 672737629850173440
   if (msg.author.id === "635074176759365632") {
     // 对消息进行翻译
-    youdao
-      .translate(msg.content, "auto", "zh_CHS")
-      .then(({ translation }) => {
-        msg.reply(translation.toString());
+    deepl
+      .translate({ text: msg.content, target_lang: "zh" })
+      .then((text) => {
+        msg.reply(text);
       })
       .catch(() => {
         msg.reply("翻译功能出错，请联系 @柠檬就是酸");
